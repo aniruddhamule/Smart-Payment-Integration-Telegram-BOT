@@ -1,6 +1,6 @@
 import json
 import logging
-from config import MONGO_URI, UPI_ID, MEMBERSHIP_PRICE
+from config import MONGO_URI
 
 logger = logging.getLogger(__name__)
 
@@ -82,13 +82,13 @@ translations_db = load_db(TRANSLATIONS_FILE, {})
 users_db = load_db(USERS_FILE, {})
 
 settings_db = load_db(SETTINGS_FILE, {
-    "upi_id": UPI_ID,
+    "upi_id": [],
     "welcome_msg": "🎉 *Welcome to {bot_name}!* 🎉\n\nGet *Premium Access* today! 🚀\n\n1️⃣ Click Join\n2️⃣ Pay via UPI\n3️⃣ Get Instant Access!",
     "approval_msg": "✅ *PAYMENT APPROVED!*\n\nWelcome to the premium channel! Click below to join:"
 })
 
 plans_db = load_db(PLANS_FILE, {
-    "plan_1": {"name": "Lifetime Access", "price": MEMBERSHIP_PRICE}
+    "plan_1": {"name": "Lifetime Access", "price": 99, "duration": "Lifetime"}
 })
 
 if 'cache_translations' not in settings_db:

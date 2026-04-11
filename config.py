@@ -28,13 +28,7 @@ ADMIN_CHAT_ID = get_env("ADMIN_CHAT_ID", "8187329376")
 
 # ============================================================
 # PAYMENT SETTINGS
-# ============================================================
-
-# Membership price
-MEMBERSHIP_PRICE = int(get_env("MEMBERSHIP_PRICE", 109))
-
-# UPI ID
-UPI_ID = get_env("UPI_ID", "aniruddha12@fam")
+# ===========================================================
 
 # Merchant Name
 MERCHANT_NAME = get_env("MERCHANT_NAME", "Premium Membership")
@@ -46,8 +40,6 @@ MERCHANT_NAME = get_env("MERCHANT_NAME", "Premium Membership")
 # Premium channel ID (ensure it's an integer)
 PREMIUM_CHANNEL_ID = int(get_env("PREMIUM_CHANNEL_ID", -1002019773776))
 
-# Fallback invite link
-PREMIUM_CHANNEL_LINK = get_env("PREMIUM_CHANNEL_LINK", "https://t.me/+ElNqgNA939BlMDU1")
 
 # ============================================================
 # INVITE LINK SETTINGS

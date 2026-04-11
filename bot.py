@@ -193,9 +193,10 @@ async def create_single_use_invite_link(context, user_id, username, order_id):
     """Create one-time invite link"""
     try:
         expiry_date = datetime.now() + timedelta(hours=INVITE_LINK_EXPIRY_HOURS)
+        target_channel = settings_db.get('channel_id', PREMIUM_CHANNEL_ID)
         
         invite_link = await context.bot.create_chat_invite_link(
-            chat_id=PREMIUM_CHANNEL_ID,
+            chat_id=target_channel,
             expire_date=int(expiry_date.timestamp()),
             member_limit=1,
             name=f"User_{user_id}_{int(time.time())}"
@@ -425,38 +426,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
              InlineKeyboardButton(btn_lang, callback_data='lang_page_0')],
             [InlineKeyboardButton(btn_contact, callback_data='contact_admin')]
         ]
-    welcomee_message = f"""
-🎉 *Welcome to {BOT_NAME}!* 🎉
-
-Hello {user.first_name}! 👋
-
-Get *Lifetime Premium Access* for just *₹{MEMBERSHIP_PRICE}*! 🚀
-
-✨ *What You'll Get:*
-• 📚 Exclusive premium content
-• ♾️ Lifetime access
-• 🎯 Fast approval (within hours)
-• 🔄 Regular updates
-
-💳 *Payment Process:*
-1️⃣ Click "Join Membership"
-2️⃣ Pay ₹{MEMBERSHIP_PRICE} via UPI
-3️⃣ Send payment screenshot
-4️⃣ Admin approves
-5️⃣ Get instant access!
-
-Ready to join? 👇
-"""
     
     raw_welcome = settings_db.get(
         'welcome_msg', 
         "🎉 <b>Welcome to {BOT_NAME}!</b> 🎉\n\nHello {USER_NAME}! 👋\n\nGet <b>Premium Access</b> today for just ₹{PRICE}!"
     )
 
+    lowest_price = "our flexible plans"
+    if plans_db:
+        prices = [p.get('price', 0) for p in plans_db.values()]
+        lowest_price = f"just ₹{min(prices)}"
+
     welcome_message_formatted = raw_welcome.replace("{bot_name}", str(BOT_NAME)).replace("{BOT_NAME}", str(BOT_NAME)) \
                                  .replace("{user_name}", str(user.first_name)).replace("{USER_NAME}", str(user.first_name)) \
-                                 .replace("{price}", str(MEMBERSHIP_PRICE)).replace("{PRICE}", str(MEMBERSHIP_PRICE)) \
-                                 .replace("{MEMBERSHIP_PRICE}", str(MEMBERSHIP_PRICE))    
+                                 .replace("{price}", str(lowest_price)).replace("{PRICE}", str(lowest_price)) \
+                                 .replace("{MEMBERSHIP_PRICE}", str(lowest_price))   
     
     welcome_message = await smart_translate(welcome_message_formatted, user_lang)
     photo_id = None
@@ -772,7 +756,7 @@ Click "Join Membership" button
 Click "Get Access Now" to see payment QR
 
 <b>Step 3: Pay via UPI</b>
-Scan QR with any UPI app and pay ₹{MEMBERSHIP_PRICE}
+Scan QR with any UPI app and pay Required Amount
 
 <b>Step 4: Send Screenshot</b>
 Click "✅ I Have Paid" and send payment screenshot
@@ -1035,7 +1019,7 @@ async def auto_expire_task(context: ContextTypes.DEFAULT_TYPE):
         save_db(MEMBERS_FILE, members_db)
 
     try:
-        channel_id = settings_db.get('channel_id') or PREMIUM_CHANNEL_ID
+        channel_id = settings_db.get('channel_id', PREMIUM_CHANNEL_ID)
         if channel_id:
             await context.bot.ban_chat_member(chat_id=channel_id, user_id=user_id)
             await context.bot.unban_chat_member(chat_id=channel_id, user_id=user_id)
@@ -2398,10 +2382,15 @@ async def back_to_main(query, context):
         "🎉 <b>Welcome back!</b> 🎉\n\nGet <b>Premium Access</b> today for just ₹{PRICE}!"
     )
     
+    lowest_price = "our flexible plans"
+    if plans_db:
+        prices = [p.get('price', 0) for p in plans_db.values()]
+        lowest_price = f"just ₹{min(prices)}"
+
     welcome_message_formatted = raw_welcome.replace("{bot_name}", str(BOT_NAME)).replace("{BOT_NAME}", str(BOT_NAME)) \
                                  .replace("{user_name}", str(user.first_name)).replace("{USER_NAME}", str(user.first_name)) \
-                                 .replace("{price}", str(MEMBERSHIP_PRICE)).replace("{PRICE}", str(MEMBERSHIP_PRICE)) \
-                                 .replace("{MEMBERSHIP_PRICE}", str(MEMBERSHIP_PRICE))    
+                                 .replace("{price}", str(lowest_price)).replace("{PRICE}", str(lowest_price)) \
+                                 .replace("{MEMBERSHIP_PRICE}", str(lowest_price))    
 
     # 👇 4. TRANSLATE MESSAGE & BUTTONS
     final_message = await smart_translate(welcome_message_formatted, user_lang)
@@ -2478,13 +2467,6 @@ def validate_config():
         errors.append("❌ ADMIN_CHAT_ID not found")
     
     try:
-        _ = UPI_ID
-        if 'your-upi-id' in UPI_ID.lower() or '@' not in UPI_ID:
-            errors.append("❌ UPI_ID invalid")
-    except NameError:
-        errors.append("❌ UPI_ID not found")
-    
-    try:
         _ = PREMIUM_CHANNEL_ID
         if PREMIUM_CHANNEL_ID >= 0:
             errors.append("❌ PREMIUM_CHANNEL_ID must be negative")
@@ -2522,7 +2504,6 @@ def main():
     print("\n" + "="*70)
     print("🚀 SEMI-AUTOMATIC MEMBERSHIP BOT")
     print("="*70)
-    print(f"💳 Payment: UPI (₹{MEMBERSHIP_PRICE})")
     print(f"🔒 Verification: Manual (Admin Approval)")
     print(f"🔗 Links: One-time use ({INVITE_LINK_EXPIRY_HOURS}h)")
     print(f"📱 Channel: {PREMIUM_CHANNEL_ID}")
@@ -2548,9 +2529,12 @@ def main():
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.PHOTO | filters.Document.IMAGE, handle_screenshot))
     application.add_handler(CommandHandler("admin", show_dashboard))
+    #application.add_handler(
+        #MessageHandler((filters.TEXT | filters.PHOTO | filters.Document.IMAGE) & ~filters.COMMAND, handle_admin_text), 
+        #group=1)
     application.add_handler(
-        MessageHandler((filters.TEXT | filters.PHOTO | filters.Document.IMAGE) & ~filters.COMMAND, handle_admin_text), 
-        group=1)
+        MessageHandler(filters.ALL & ~filters.COMMAND, handle_admin_text), 
+        group=1)    
     # Admin commands
     application.add_handler(CommandHandler("approve", approve_order))
     application.add_handler(CommandHandler("reject", reject_order))
@@ -2567,7 +2551,6 @@ def main():
     application.add_error_handler(error_handler)
     
     logger.info("✅ Semi-Auto Bot Started!")
-    logger.info(f"💰 Price: ₹{MEMBERSHIP_PRICE}")
     logger.info(f"🔒 Mode: Manual Approval")
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)

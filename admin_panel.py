@@ -128,6 +128,9 @@ async def show_dashboard(update: Update, context: ContextTypes.DEFAULT_TYPE):
             {"text": "💬 Edit Messages", "callback_data": "admin_edit_msgs", "style": "primary"}
         ],
         [
+            {"text": "📢 Set Premium Channel", "callback_data": "admin_set_channel", "style": "primary"}
+        ],
+        [
             {"text": "📊 Open Live Analytics", "callback_data": "stats_main", "style": "success"}
         ],
         [
@@ -253,7 +256,31 @@ async def handle_admin_callbacks(update: Update, context: ContextTypes.DEFAULT_T
             [InlineKeyboardButton("🔙 Back", callback_data='admin_dash')]
         ]
         await query.edit_message_text("💬 *Which message do you want to edit?*", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='Markdown')
+
+    elif query.data == 'admin_set_channel':
+        current_id = settings_db.get('channel_id')
+        current_name = settings_db.get('channel_name', 'Not Set')
+        current_link = settings_db.get('channel_link', '')
+
+        if current_id and current_link:
+            status_msg = f"Current Channel: [{current_name}]({current_link})"
+        else:
+            status_msg = "Current Channel: ❌ Not Set"
+
+        text = (
+            f"📢 *Set Premium Channel*\n\n"
+            f"{status_msg}\n\n"
+            f"To link a new channel, you can either:\n"
+            f"1️⃣ Send the *Channel ID* (e.g., `-100123456789`)\n"
+            f"2️⃣ *Forward* any message/media from the channel here.\n\n"
+            f"⚠️ *CRITICAL:* The bot MUST be added to the channel as an Admin with 'Invite Users' rights before you do this!"
+        )
+
+        keyboard = [[InlineKeyboardButton("🔙 Cancel", callback_data='admin_dash')]]
+        context.user_data['admin_state'] = 'waiting_for_channel'
         
+        await query.edit_message_text(text, parse_mode='Markdown', reply_markup=InlineKeyboardMarkup(keyboard), disable_web_page_preview=True)
+
     elif query.data == 'admin_welcome_image':
         context.user_data['admin_state'] = 'waiting_for_welcome_image'
         await query.edit_message_text(
@@ -456,5 +483,71 @@ async def handle_admin_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_dashboard(update, context)
         return    
 
+    elif state == 'waiting_for_channel':
+        from telegram.constants import ChatMemberStatus
+        msg = update.message
+        chat_id = None
+
+        # 👇 THE FIX: Safely handles both PTB v20.7 (old API) and v21+ (new API)
+        if getattr(msg, 'forward_origin', None) and getattr(msg.forward_origin, 'type', '') == 'channel':
+            chat_id = msg.forward_origin.chat.id
+        elif getattr(msg, 'forward_from_chat', None) and msg.forward_from_chat.type == 'channel':
+            chat_id = msg.forward_from_chat.id
+        # Method 1: Check if they typed a direct ID
+        elif msg.text:
+            try:
+                chat_id = int(msg.text.strip())
+            except ValueError:
+                pass
+
+        if not chat_id:
+            await update.message.reply_text("❌ Invalid input. Please send a valid numeric Channel ID or forward a message from the channel.")
+            return
+
+        try:
+            # 1. Verify admin rights
+            bot_member = await context.bot.get_chat_member(chat_id, context.bot.id)
+            if bot_member.status != ChatMemberStatus.ADMINISTRATOR:
+                await update.message.reply_text("❌ I am in that channel, but I am NOT an admin. Please promote me and try again!")
+                return
+
+            # 2. Verify invite rights
+            if not bot_member.can_invite_users:
+                await update.message.reply_text("❌ I am an admin, but I don't have the 'Invite Users via Link' permission. Please enable it!")
+                return
+
+            # 3. Fetch details & generate link
+            chat = await context.bot.get_chat(chat_id)
+            invite_link = chat.invite_link
+            if not invite_link:
+                new_link = await context.bot.create_chat_invite_link(chat_id)
+                invite_link = new_link.invite_link
+
+            # 4. Save to Database
+            settings_db['channel_id'] = chat_id
+            settings_db['channel_name'] = chat.title
+            settings_db['channel_link'] = invite_link
+            save_db(SETTINGS_FILE, settings_db)
+
+            await update.message.reply_text(
+                f"✅ *Channel Successfully Linked!*\n\n"
+                f"**Name:** [{chat.title}]({invite_link})\n"
+                f"**ID:** `{chat_id}`\n\n"
+                f"All new approvals will now be routed here.",
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
+            context.user_data.pop('admin_state', None)
+            await show_dashboard(update, context)
+
+        except Exception as e:
+            await update.message.reply_text(
+                f"❌ *Error linking channel.*\n"
+                f"Please ensure I have been added to the channel as an Admin first!\n"
+                f"Details: `{e}`", 
+                parse_mode='Markdown'
+            )
+            return
+        
     context.user_data.pop('admin_state', None)
     await show_dashboard(update, context)

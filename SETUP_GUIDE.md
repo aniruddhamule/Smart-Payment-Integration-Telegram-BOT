@@ -272,8 +272,6 @@ PREMIUM_CHANNEL_ID = -1001234567890
 #### 7.3 Optional: Customize
 
 ```python
-# Change price
-MEMBERSHIP_PRICE = 99  # Change to any amount
 
 # Change merchant name
 MERCHANT_NAME = "Your Business Name"
@@ -426,7 +424,6 @@ docker-compose restart
 
 Edit `config.py`:
 ```python
-MEMBERSHIP_PRICE = 199  # Change to any amount
 ```
 
 Restart:
@@ -651,8 +648,6 @@ Before going live, verify:
 
 1. **Test with ₹1:**
    ```python
-   # In config.py
-   MEMBERSHIP_PRICE = 1
    ```
    - Restart bot
    - Complete a real ₹1 transaction
