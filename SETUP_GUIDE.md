@@ -239,57 +239,35 @@ You should see:
 
 ### STEP 7: CONFIGURE BOT
 
-#### 7.1 Open config.py
+You no longer need to edit Python files! The bot uses a secure `.env` file for your core keys.
 
-```bash
-nano config.py
-```
+#### 7.1 Create the .env File
+In your bot folder, create a file named exactly `.env` (don't forget the dot!) and add these keys:
 
-Or use any text editor.
+```env
+# 1. CORE SECURITY
+TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqr_STUvwxyz
+MONGO_URI=mongodb+srv://admin:password@cluster.mongodb.net/bot_db
+ADMIN_CHAT_ID=123456789
+ADMIN_USERNAME=@YourAdminHandle
 
-#### 7.2 Fill in Your Details
+# 2. GLOBAL DISPLAY (Optional)
+BOT_NAME="Premium Membership Bot"
+MERCHANT_NAME="Premium Service"
 
-Find these lines and replace:
 
-```python
-# 1. BOT TOKEN (from @BotFather)
-TELEGRAM_BOT_TOKEN = "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-# ↑ Paste your bot token here
+ ### STEP 8: RUN BOT
 
-# 2. ADMIN CHAT ID (from @userinfobot)
-ADMIN_CHAT_ID = "123456789"
-# ↑ Paste your user ID here
+ #### Method A: Cloud Deployment (Recommended)
+You can deploy this bot 24/7 for free using Koyeb or Railway!
+1. Push your code to a private GitHub repository.
+2. Log into [Koyeb](https://app.koyeb.com) or [Railway](https://railway.app).
+3. Connect your GitHub and select the bot repository.
+4. **Important:** Change the deployment type to **Worker** (Background Task).
+5. Add your `.env` variables into the platform's Environment Variables tab.
+6. Click Deploy!
 
-# 3. UPI ID (from your UPI app)
-UPI_ID = "9876543210@paytm"
-# ↑ Paste your UPI ID here
-
-# 4. CHANNEL ID (from @userinfobot)
-PREMIUM_CHANNEL_ID = -1001234567890
-# ↑ Paste your channel ID here (with minus sign!)
-```
-
-#### 7.3 Optional: Customize
-
-```python
-
-# Change merchant name
-MERCHANT_NAME = "Your Business Name"
-
-# Change link expiry
-INVITE_LINK_EXPIRY_HOURS = 24  # Hours before link expires
-```
-
-#### 7.4 Save File
-
-- In nano: Press `Ctrl+X`, then `Y`, then `Enter`
-- In other editors: Save normally
-
----
-
-### STEP 8: RUN BOT
-
-#### 8.1 Quick Setup (Automated)
+#### METHOD B: (Automated)
 
 ```bash
 # Make setup script executable
@@ -395,25 +373,20 @@ You should see welcome message with buttons.
 
 ---
 
-## 🔧 ADDITIONAL CONFIGURATION
+### 📝 3. Add the "Admin Dashboard" Section
+Right after **STEP 10**, add this brand new section explaining your new SaaS features:
 
-### Change Bot Messages
+```markdown
+## 🎛️ STEP 11: THE IN-APP ADMIN DASHBOARD
 
-Edit `bot.py`:
+You don't need to touch any code to manage your bot! Send `/admin` to your bot on Telegram to open the interactive control panel.
 
-**Welcome message:** Line ~110
-```python
-welcome_message = f"""
-🎉 **Your custom welcome message here**
-"""
-```
-
-**Payment message:** Line ~290
-```python
-payment_message = f"""
-💳 **Your custom payment instructions**
-"""
-```
+From here you can:
+* **📢 Set Premium Channel:** Forward a message from your private channel to instantly link it to the bot.
+* **🏦 Manage UPI:** Add, delete, or rotate multiple UPI IDs dynamically.
+* **📋 Manage Plans:** Create 1-month, 6-month, or Lifetime plans with custom prices without touching code!
+* **💬 Edit Messages:** Change the Welcome message, Approval text, or Default Image using Telegram's built-in formatting.
+* **💳 Gateway Setup:** Add Razorpay API keys and toggle between "Manual" and "Auto-Approve" modes.
 
 After editing:
 ```bash
