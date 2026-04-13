@@ -495,6 +495,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e2:
                 print(f"Safe photo fallback failed entirely: {e2}")
 
+    else:
+        try:
+            if update.callback_query:
+                try:
+                    await update.callback_query.message.delete()
+                except Exception:
+                    pass
+            # Send the normal text menu using your colored settings
+            await send_colored_settings(
+                bot_token=TELEGRAM_BOT_TOKEN,
+                chat_id=user.id,
+                text=welcome_message,
+                raw_keyboard=raw_keyboard
+            )
+        except Exception as e:
+            print(f"Text fallback failed: {e}")
+            await context.bot.send_message(
+                chat_id=user.id,
+                text=clean_text,
+                reply_markup=InlineKeyboardMarkup(fallback_kb)
+            )            
+
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         #Handle buttons
 
@@ -2365,18 +2387,13 @@ async def back_to_main(query, context):
     user = query.from_user
     user_id = str(user.id)
     chat_id = query.message.chat_id
-    
-    # 👇 1. GRAB THE USER'S LANGUAGE
     user_lang = users_db.get(user_id, {}).get('lang', 'en')
-
-    # 👇 2. SMART CHECK: ARE THEY ALREADY A MEMBER?
     is_active_member = False
     for oid, order in orders_db.items():
         if str(order.get('user_id')) == user_id and order.get('status') in ['approved', 'pending', 'pending_gateway']:
             is_active_member = True
             break
 
-    # 👇 3. FORMAT WELCOME MESSAGE (Using HTML, NOT Markdown)
     raw_welcome = settings_db.get(
         'welcome_msg', 
         "🎉 <b>Welcome back!</b> 🎉\n\nGet <b>Premium Access</b> today for just ₹{PRICE}!"
@@ -2392,7 +2409,7 @@ async def back_to_main(query, context):
                                  .replace("{price}", str(lowest_price)).replace("{PRICE}", str(lowest_price)) \
                                  .replace("{MEMBERSHIP_PRICE}", str(lowest_price))    
 
-    # 👇 4. TRANSLATE MESSAGE & BUTTONS
+    # TRANSLATE MESSAGE & BUTTONS
     final_message = await smart_translate(welcome_message_formatted, user_lang)
     
     btn_active = await smart_translate("📊 Active Plans", user_lang)
@@ -2401,9 +2418,8 @@ async def back_to_main(query, context):
     btn_contact = await smart_translate("📞 Contact Admin", user_lang)
     btn_lang = await smart_translate("🌍 Language", user_lang)
 
-    # 👇 5. BUILD THE COLORED KEYBOARD
+
     if is_active_member:
-        # Dashboard for users who have a history
         raw_keyboard = [
             [{"text": btn_active, "callback_data": "my_active_plans", "style": "success"},
              {"text": btn_lang, "callback_data": "lang_page_0", "style": "primary"}],
@@ -2411,7 +2427,6 @@ async def back_to_main(query, context):
             [{"text": btn_contact, "callback_data": "contact_admin", "style": "primary"}]
         ]
     else:
-        # Standard welcome for brand new users
         raw_keyboard = [
             [{"text": btn_join, "callback_data": "join_membership", "style": "success"}],
             [{"text": btn_how, "callback_data": "how_it_works", "style": "primary"},
@@ -2419,10 +2434,8 @@ async def back_to_main(query, context):
             [{"text": btn_contact, "callback_data": "contact_admin", "style": "primary"}]
         ]
 
-    # 👇 6. SEND VIA CUSTOM API
     try:
         if query.message.text:
-            # It's a text message, can seamlessly edit
             await send_colored_settings(
                 bot_token=TELEGRAM_BOT_TOKEN, 
                 chat_id=chat_id,
@@ -2431,7 +2444,6 @@ async def back_to_main(query, context):
                 message_id=query.message.message_id
             )
         else:
-            # It's a photo/QR message, must delete and send fresh text
             try:
                 await query.message.delete()
             except:

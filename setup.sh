@@ -38,27 +38,40 @@ echo ""
 
 # Check env file (Updated to match new architecture requirements)
 echo -e "${YELLOW}🔐 Checking environment variables...${NC}"
-if [ ! -f .env ]; then
-    echo -e "${RED}❌ .env file not found!${NC}"
-    echo -e "${YELLOW}Creating a template .env file for you...${NC}"
-    echo "TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqr_STUvwxyz" > .env
-    echo "MONGO_URI=mongodb+srv://admin:yourpassword@cluster0.mongodb.net/bot_db" >> .env
-    echo "ADMIN_CHAT_ID=123456789" >> .env
-    echo "ADMIN_USERNAME=@YourAdminHandle" >> .env
+if [ ! -f .env ] || grep -q "123456789:ABCdefGHIjklMNOpqr_STUvwxyz" .env; then
+    echo -e "${YELLOW}⚠️ No valid configuration found. Let's set it up now!${NC}"
+    echo "Please paste the following credentials (Right-click to paste in most terminals):"
     echo ""
-    echo -e "${YELLOW}⚠️ ACTION REQUIRED: Please edit the .env file with your actual keys, then run this script again.${NC}"
-    exit 1
-fi
 
-# Look for the new dummy token string
-if grep -q "123456789:ABCdefGHIjklMNOpqr_STUvwxyz" .env; then
-    echo -e "${RED}❌ Please configure your .env file first!${NC}"
-    echo "Edit the .env file and replace the placeholder text with your actual keys."
-    exit 1
-fi
+    # Prompt the user for inputs
+    read -p "1. Enter TELEGRAM_BOT_TOKEN (from @BotFather): " INPUT_BOT_TOKEN
+    read -p "2. Enter MONGO_URI (Your MongoDB connection string): " INPUT_MONGO_URI
+    read -p "3. Enter ADMIN_CHAT_ID (Numeric ID from @userinfobot): " INPUT_ADMIN_ID
+    read -p "4. Enter ADMIN_USERNAME (e.g., @yourhandle): " INPUT_ADMIN_USERNAME
 
-echo -e "${GREEN}✅ Secure .env Configuration looks good${NC}"
-echo ""
+    echo ""
+    echo -e "${YELLOW}Writing configuration to .env file...${NC}"
+
+    # Write the inputs safely into the .env file
+    cat <<EOF > .env
+# 1. CORE SECURITY
+TELEGRAM_BOT_TOKEN=$INPUT_BOT_TOKEN
+MONGO_URI=$INPUT_MONGO_URI
+ADMIN_CHAT_ID=$INPUT_ADMIN_ID
+ADMIN_USERNAME=$INPUT_ADMIN_USERNAME
+
+# 2. GLOBAL DISPLAY SETTINGS
+BOT_NAME="Premium Membership Bot"
+MERCHANT_NAME="Premium Service"
+INVITE_LINK_EXPIRY_HOURS=24
+EOF
+
+    echo -e "${GREEN}✅ .env file successfully created!${NC}"
+    echo ""
+else
+    echo -e "${GREEN}✅ Secure .env Configuration found and looks good!${NC}"
+    echo ""
+fi
 
 # Build (Updated to remove hyphen)
 echo -e "${YELLOW}🔨 Building Docker image...${NC}"
@@ -90,4 +103,4 @@ echo "  docker compose down       # Stop bot"
 echo "  docker compose restart    # Restart bot"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo -e "${GREEN}🎉 Setup complete!${NC}"
+echo -e "${GREEN}🎉 Setup complete! Send /admin to your bot to finish configuring plans and channels.${NC}"
